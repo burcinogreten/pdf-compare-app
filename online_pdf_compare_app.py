@@ -3,10 +3,9 @@ from pdf2image import convert_from_bytes
 from PIL import Image, ImageChops, ImageDraw
 import io
 from datetime import date
-from PyPDF2 import PdfReader
 
 st.set_page_config(page_title="PDF Görsel Karşılaştırıcı", layout="wide")
-st.title("📄 PDF Karşılaştırıcı (Sayfa Seçimli + Notlar + Görünüm)")
+st.title("📄 PDF Karşılaştırıcı (Görsel + Notlar + Tarih + Görünüm Seçimi)")
 
 uploaded_files = st.file_uploader("PDF dosyalarınızı yükleyin (en fazla 10 tane)", type="pdf", accept_multiple_files=True)
 
@@ -19,16 +18,6 @@ if uploaded_files and len(uploaded_files) >= 2:
         file1_name = st.selectbox("📂 Önceki Versiyon", file_names)
     with col2:
         file2_name = st.selectbox("📂 Yeni Versiyon", file_names, index=1)
-
-    # Sayfa seçimi
-    try:
-        pdf1_reader = PdfReader(file_dict[file1_name])
-        pdf2_reader = PdfReader(file_dict[file2_name])
-        max_pages = min(len(pdf1_reader.pages), len(pdf2_reader.pages))
-        selected_page = st.number_input("📄 Karşılaştırılacak Sayfa Numarası", min_value=1, max_value=max_pages, value=1)
-    except:
-        st.warning("Sayfa sayısı alınamadı. Dosyaları yeniden yükleyin.")
-        selected_page = 1
 
     st.markdown("---")
     st.subheader("📝 Notlar ve Revizyon Tarihi")
@@ -43,10 +32,10 @@ if uploaded_files and len(uploaded_files) >= 2:
             pdf1 = file_dict[file1_name].read()
             pdf2 = file_dict[file2_name].read()
 
-            st.subheader(f"🖼️ Sayfa {selected_page} Görsel Karşılaştırması")
+            st.subheader("🖼️ Sayfa 1 Görsel Karşılaştırması")
             try:
-                img1 = convert_from_bytes(pdf1, first_page=selected_page, last_page=selected_page)[0].convert("RGB")
-                img2 = convert_from_bytes(pdf2, first_page=selected_page, last_page=selected_page)[0].convert("RGB")
+                img1 = convert_from_bytes(pdf1, first_page=1, last_page=1)[0].convert("RGB")
+                img2 = convert_from_bytes(pdf2, first_page=1, last_page=1)[0].convert("RGB")
 
                 # Boyutları eşitle
                 img1 = img1.resize((1000, 1400))
