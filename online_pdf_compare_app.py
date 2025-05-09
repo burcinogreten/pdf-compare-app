@@ -1,11 +1,11 @@
-
 import streamlit as st
 from pdf2image import convert_from_bytes
-from PIL import Image, ImageChops
+from PIL import Image, ImageChops, ImageDraw
 import io
+from datetime import date
 
 st.set_page_config(page_title="PDF Görsel Karşılaştırıcı", layout="wide")
-st.title("📄 PDF Karşılaştırıcı (Yan Yana Görsel)")
+st.title("📄 PDF Karşılaştırıcı (Görsel + Notlar + Tarih + Görünüm Seçimi)")
 
 uploaded_files = st.file_uploader("PDF dosyalarınızı yükleyin (en fazla 10 tane)", type="pdf", accept_multiple_files=True)
 
@@ -19,6 +19,14 @@ if uploaded_files and len(uploaded_files) >= 2:
     with col2:
         file2_name = st.selectbox("📂 Yeni Versiyon", file_names, index=1)
 
+    st.markdown("---")
+    st.subheader("📝 Notlar ve Revizyon Tarihi")
+    selected_date = st.date_input("📅 Revizyon Tarihi", value=date.today())
+    notes = st.text_area("📌 Notlarınızı yazın (örneğin: ne değişti, kim yaptı)")
+
+    st.markdown("---")
+    view_option = st.radio("🖼️ Görüntüleme Şekli", ["Yan Yana", "Üst Üste"], horizontal=True)
+
     if file1_name != file2_name:
         if st.button("🔍 Karşılaştır"):
             pdf1 = file_dict[file1_name].read()
@@ -26,8 +34,8 @@ if uploaded_files and len(uploaded_files) >= 2:
 
             st.subheader("🖼️ Sayfa 1 Görsel Karşılaştırması")
             try:
-                img1 = convert_from_bytes(pdf1, first_page=1, last_page=1)[0]
-                img2 = convert_from_bytes(pdf2, first_page=1, last_page=1)[0]
+                img1 = convert_from_bytes(pdf1, first_page=1, last_page=1)[0].convert("RGB")
+                img2 = convert_from_bytes(pdf2, first_page=1, last_page=1)[0].convert("RGB")
 
                 # Boyutları eşitle
                 img1 = img1.resize((1000, 1400))
@@ -35,13 +43,29 @@ if uploaded_files and len(uploaded_files) >= 2:
 
                 diff = ImageChops.difference(img1, img2)
 
-                col1, col2, col3 = st.columns(3)
-                with col1:
+                # Farkları işaretle
+                bbox = diff.getbbox()
+                highlighted = img2.copy()
+                if bbox:
+                    draw = ImageDraw.Draw(highlighted)
+                    draw.rectangle(bbox, outline="red", width=5)
+
+                if view_option == "Yan Yana":
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.image(img1, caption="Önceki Versiyon")
+                    with col2:
+                        st.image(img2, caption="Yeni Versiyon")
+                    with col3:
+                        st.image(highlighted, caption="Farklılıklar (Kırmızıyla İşaretli)")
+                else:
                     st.image(img1, caption="Önceki Versiyon")
-                with col2:
                     st.image(img2, caption="Yeni Versiyon")
-                with col3:
-                    st.image(diff, caption="Farklılıklar (1. Sayfa)")
+                    st.image(highlighted, caption="Farklılıklar (Kırmızıyla İşaretli)")
+
+                # Not ve tarih bilgisi görüntüleme
+                st.markdown("---")
+                st.success(f"🗓️ Tarih: {selected_date}  \n📝 Not: {notes if notes else 'Not girilmedi'}")
 
             except Exception as e:
                 st.error(f"Görsel karşılaştırma sırasında hata oluştu: {e}")
