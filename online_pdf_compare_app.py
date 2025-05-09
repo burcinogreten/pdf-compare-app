@@ -29,45 +29,52 @@ if uploaded_files and len(uploaded_files) >= 2:
 
     if file1_name != file2_name:
         if st.button("🔍 Karşılaştır"):
-            pdf1 = file_dict[file1_name].read()
-            pdf2 = file_dict[file2_name].read()
+            pdf1 = file_dict[file1_name].getvalue()
+            pdf2 = file_dict[file2_name].getvalue()
 
             st.subheader("🖼️ Sayfa 1 Görsel Karşılaştırması")
             try:
-                img1 = convert_from_bytes(pdf1, first_page=1, last_page=1)[0].convert("RGB")
-                img2 = convert_from_bytes(pdf2, first_page=1, last_page=1)[0].convert("RGB")
+                # PDF'leri görüntüye çevir
+                img1 = convert_from_bytes(pdf1, first_page=1, last_page=1, dpi=200)[0].convert("RGB")
+                img2 = convert_from_bytes(pdf2, first_page=1, last_page=1, dpi=200)[0].convert("RGB")
 
-                # Boyutları eşitle
-                img1 = img1.resize((1000, 1400))
-                img2 = img2.resize((1000, 1400))
+                # Boyutları eşitle (orijinal en-boy oranını koruyarak)
+                max_width = 800
+                ratio = min(max_width/img1.width, max_width/img2.width)
+                new_size = (int(img1.width * ratio), int(img1.height * ratio))
+                
+                img1 = img1.resize(new_size, Image.LANCZOS)
+                img2 = img2.resize(new_size, Image.LANCZOS)
 
+                # Farkları bul
                 diff = ImageChops.difference(img1, img2)
-
+                
                 # Farkları işaretle
                 bbox = diff.getbbox()
                 highlighted = img2.copy()
                 if bbox:
                     draw = ImageDraw.Draw(highlighted)
-                    draw.rectangle(bbox, outline="red", width=5)
+                    draw.rectangle(bbox, outline="red", width=3)
 
                 if view_option == "Yan Yana":
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        st.image(img1, caption="Önceki Versiyon")
+                        st.image(img1, caption="Önceki Versiyon", use_column_width=True)
                     with col2:
-                        st.image(img2, caption="Yeni Versiyon")
+                        st.image(img2, caption="Yeni Versiyon", use_column_width=True)
                     with col3:
-                        st.image(highlighted, caption="Farklılıklar (Kırmızıyla İşaretli)")
+                        st.image(highlighted, caption="Farklılıklar (Kırmızıyla İşaretli)", use_column_width=True)
                 else:
-                    st.image(img1, caption="Önceki Versiyon")
-                    st.image(img2, caption="Yeni Versiyon")
-                    st.image(highlighted, caption="Farklılıklar (Kırmızıyla İşaretli)")
+                    st.image(img1, caption="Önceki Versiyon", use_column_width=True)
+                    st.image(img2, caption="Yeni Versiyon", use_column_width=True)
+                    st.image(highlighted, caption="Farklılıklar (Kırmızıyla İşaretli)", use_column_width=True)
 
                 # Not ve tarih bilgisi
                 st.markdown("---")
                 st.success(f"🗓️ Tarih: {selected_date}  \n📝 Not: {notes if notes else 'Not girilmedi'}")
 
             except Exception as e:
-                st.error(f"Görsel karşılaştırma sırasında hata oluştu: {e}")
+                st.error(f"Görsel karşılaştırma sırasında hata oluştu: {str(e)}")
+                st.error("PDF'ler görüntüye dönüştürülemedi. PDF'lerin bozuk olmadığından emin olun.")
 else:
     st.info("Lütfen karşılaştırmak için en az iki PDF dosyası yükleyin.")
