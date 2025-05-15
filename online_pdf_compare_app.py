@@ -3,6 +3,7 @@ from pdf2image import convert_from_bytes
 from PIL import Image, ImageChops, ImageDraw
 import io
 from datetime import date
+import numpy as np
 
 st.set_page_config(page_title="PDF Görsel Karşılaştırıcı", layout="wide")
 st.title("📄 PDF Karşılaştırıcı (Görsel + Notlar + Tarih + Görünüm Seçimi)")
@@ -26,6 +27,7 @@ if uploaded_files and len(uploaded_files) >= 2:
 
     st.markdown("---")
     view_option = st.radio("🖼️ Görüntüleme Şekli", ["Yan Yana", "Üst Üste"], horizontal=True)
+    highlight_option = st.checkbox("🔴 Farklılıkları vurgula", value=True)
 
     if file1_name != file2_name:
         if st.button("🔍 Karşılaştır"):
@@ -49,12 +51,17 @@ if uploaded_files and len(uploaded_files) >= 2:
                 # Farkları bul
                 diff = ImageChops.difference(img1, img2)
                 
-                # Farkları işaretle
-                bbox = diff.getbbox()
+                # Farkları işaretle (eğer seçiliyse)
                 highlighted = img2.copy()
-                if bbox:
-                    draw = ImageDraw.Draw(highlighted)
-                    draw.rectangle(bbox, outline="red", width=3)
+                if highlight_option:
+                    diff_array = np.array(diff)
+                    if np.any(diff_array > 0):
+                        bbox = diff.getbbox()
+                        if bbox:
+                            draw = ImageDraw.Draw(highlighted)
+                            draw.rectangle(bbox, outline="red", width=3)
+                    else:
+                        st.success("✅ İki PDF arasında görsel fark bulunamadı.")
 
                 if view_option == "Yan Yana":
                     col1, col2, col3 = st.columns(3)
@@ -62,12 +69,14 @@ if uploaded_files and len(uploaded_files) >= 2:
                         st.image(img1, caption="Önceki Versiyon", use_column_width=True)
                     with col2:
                         st.image(img2, caption="Yeni Versiyon", use_column_width=True)
-                    with col3:
-                        st.image(highlighted, caption="Farklılıklar (Kırmızıyla İşaretli)", use_column_width=True)
+                    if highlight_option:
+                        with col3:
+                            st.image(highlighted, caption="Farklılıklar (Kırmızıyla İşaretli)", use_column_width=True)
                 else:
                     st.image(img1, caption="Önceki Versiyon", use_column_width=True)
                     st.image(img2, caption="Yeni Versiyon", use_column_width=True)
-                    st.image(highlighted, caption="Farklılıklar (Kırmızıyla İşaretli)", use_column_width=True)
+                    if highlight_option:
+                        st.image(highlighted, caption="Farklılıklar (Kırmızıyla İşaretli)", use_column_width=True)
 
                 # Not ve tarih bilgisi
                 st.markdown("---")
